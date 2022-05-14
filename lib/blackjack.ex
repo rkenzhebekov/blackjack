@@ -1,18 +1,16 @@
 defmodule Blackjack do
-  @moduledoc """
-  Documentation for `Blackjack`.
-  """
+  use Application
 
-  @doc """
-  Hello world.
+  def start(_type, _args) do
+    import Supervisor.Spec
 
-  ## Examples
+    children = [
+      supervisor(Registry, [:unique, Blackjack.Registry]),
+      Blackjack.RoundServer.child_spec()
+    ]
 
-      iex> Blackjack.hello()
-      :world
-
-  """
-  def hello do
-    :world
+    Supervisor.start_link(children, strategy: :rest_for_one)
   end
+
+  def service_name(service_id), do: {:via, Registry, {Blackjack.Registry, service_id}}
 end
