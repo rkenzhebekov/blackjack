@@ -11,11 +11,12 @@ defmodule Blackjack.RoundTest do
 
   test "initial play" do
     assert {deals, _} = Round.start([:a, :b], deck([2, 3, 4, 5]))
+
     assert deals == [
-      notify_player_instruction(:a, {:deal_card, card(2)}),
-      notify_player_instruction(:a, {:deal_card, card(3)}),
-      notify_player_instruction(:a, :move),
-    ]
+             notify_player_instruction(:a, {:deal_card, card(2)}),
+             notify_player_instruction(:a, {:deal_card, card(3)}),
+             notify_player_instruction(:a, :move)
+           ]
   end
 
   test "stand moves to next player" do
@@ -44,16 +45,20 @@ defmodule Blackjack.RoundTest do
 
   test "taking a hit" do
     {_, round} = Round.start([:a], deck([2, 3, 4, 5, 6]))
+
     assert {[
-      notify_player_instruction(:a, {:deal_card, card}),
-      notify_player_instruction(:a, :move)
-    ], _round} = Round.move(round, :a, :hit)
+              notify_player_instruction(:a, {:deal_card, card}),
+              notify_player_instruction(:a, :move)
+            ], _round} = Round.move(round, :a, :hit)
+
     assert card == card(4)
   end
 
   test "taking a stand" do
     {_, round} = Round.start([:a], deck([2, 3, 4, 5, 6]))
-    assert {[notify_player_instruction(:a, {:winners, [:a]})], _round} = Round.move(round, :a, :stand)
+
+    assert {[notify_player_instruction(:a, {:winners, [:a]})], _round} =
+             Round.move(round, :a, :stand)
   end
 
   test "busting" do
@@ -74,11 +79,12 @@ defmodule Blackjack.RoundTest do
     {_, round} = Round.start([:a, :b, :c], deck([3, 3, 3, 3, 2, 2]))
     {_, round} = Round.move(round, :a, :stand)
     {_, round} = Round.move(round, :b, :stand)
+
     assert {[
-      notify_player_instruction(:a, {:winners, [:a, :b]}),
-      notify_player_instruction(:b, {:winners, [:a, :b]}),
-      notify_player_instruction(:c, {:winners, [:a, :b]})
-    ], _} = Round.move(round, :c, :stand)
+              notify_player_instruction(:a, {:winners, [:a, :b]}),
+              notify_player_instruction(:b, {:winners, [:a, :b]}),
+              notify_player_instruction(:c, {:winners, [:a, :b]})
+            ], _} = Round.move(round, :c, :stand)
   end
 
   test "unauthorized move" do
@@ -90,16 +96,16 @@ defmodule Blackjack.RoundTest do
   test "more players than cards in a single deck" do
     player_ids = Enum.map(1..100, &:"player_#{&1}")
     {instructions, round} = Round.start(player_ids)
+
     {instructions, _} =
-      Enum.reduce(player_ids, {instructions, round},
-        fn(player_id, {_, round}) -> Round.move(round, player_id, :stand) end
-      )
+      Enum.reduce(player_ids, {instructions, round}, fn player_id, {_, round} ->
+        Round.move(round, player_id, :stand)
+      end)
+
     assert Enum.any?(instructions, &match?(notify_player_instruction(_, {:winners, _}), &1))
   end
 
-  def deck(ranks), do:
-    Enum.map(ranks, &card/1)
+  def deck(ranks), do: Enum.map(ranks, &card/1)
 
-  defp card(rank), do:
-    %{rank: rank, suit: :hearts}
+  defp card(rank), do: %{rank: rank, suit: :hearts}
 end
