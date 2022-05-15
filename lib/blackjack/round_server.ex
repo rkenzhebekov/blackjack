@@ -8,26 +8,27 @@ defmodule Blackjack.RoundServer do
 
   @spec start_playing(id, [player]) :: DynamicSupervisor.on_start_child()
   def start_playing(round_id, players) do
-    DynamicSupervisor.start_child(
-      Blackjack.RoundsDynamicSup,
-      %{id: Supervisor, start: {__MODULE__, :start_supervisor, [round_id, players]}}
-    )
+    supervisor_spec = %{
+      id: Supervisor,
+      start: {
+        Supervisor,
+        :start_link,
+        [
+          [
+            PlayerNotifier.child_spec(round_id, players),
+            %{id: __MODULE__, start: {__MODULE__, :start_link, [round_id, players]}}
+          ],
+          [strategy: :one_for_all]
+        ]
+      }
+    }
+
+    DynamicSupervisor.start_child(Blackjack.RoundsDynamicSup, supervisor_spec)
   end
 
   @spec move(id, Round.player_id(), Round.move()) :: :ok
   def move(round_id, player_id, move),
     do: GenServer.call(service_name(round_id), {:move, player_id, move})
-
-  @doc false
-  def start_supervisor(round_id, players),
-    do:
-      Supervisor.start_link(
-        [
-          PlayerNotifier.child_spec(round_id, players),
-          %{id: __MODULE__, start: {__MODULE__, :start_link, [round_id, players]}}
-        ],
-        strategy: :one_for_all
-      )
 
   @doc false
   def start_link(round_id, players),

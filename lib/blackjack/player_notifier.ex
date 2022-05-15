@@ -11,15 +11,20 @@ defmodule Blackjack.PlayerNotifier do
 
   @spec child_spec(RoundServer.id(), [RoundServer.player()]) :: Supervisor.Spec.spec()
   def child_spec(round_id, players) do
-    import Supervisor.Spec
-
-    supervisor(
-      Supervisor,
-      [
-        Enum.map(players, &worker(__MODULE__, [round_id, &1], id: {__MODULE__, &1.id})),
-        [strategy: :one_for_one]
-      ]
-    )
+    %{
+      id: Supervisor,
+      start: {
+        Supervisor,
+        :start_link,
+        [
+          Enum.map(
+            players,
+            &%{id: {__MODULE__, &1.id}, start: {__MODULE__, :start_link, [round_id, &1]}}
+          ),
+          [strategy: :one_for_one]
+        ]
+      }
+    }
   end
 
   @spec publish(RoundServer.id(), Round.player_id(), Round.player_instruction()) :: :ok
