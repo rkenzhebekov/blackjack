@@ -1,29 +1,18 @@
 defmodule Blackjack.RoundServer do
   use GenServer
-  import Supervisor.Spec
   alias Blackjack.{PlayerNotifier, Round}
-
-  @rounds_supervisor Blackjack.RoundsSup
 
   @type id :: any
   @type player :: %{id: Round.player_id(), callback_mod: module, callback_arg: callback_arg}
   @type callback_arg :: any
 
-  @spec child_spec() :: Supervisor.Spec.spec()
-  def child_spec(),
-    do:
-      supervisor(
-        Supervisor,
-        [
-          [supervisor(__MODULE__, [], function: :start_supervisor)],
-          [strategy: :simple_one_for_one, name: @rounds_supervisor]
-        ],
-        id: @rounds_supervisor
-      )
-
-  @spec start_playing(id, [player]) :: Supervisor.on_start_child()
-  def start_playing(round_id, players),
-    do: Supervisor.start_child(@rounds_supervisor, [round_id, players])
+  @spec start_playing(id, [player]) :: DynamicSupervisor.on_start_child()
+  def start_playing(round_id, players) do
+    DynamicSupervisor.start_child(
+      Blackjack.RoundsDynamicSup,
+      %{id: Supervisor, start: {__MODULE__, :start_supervisor, [round_id, players]}}
+    )
+  end
 
   @spec move(id, Round.player_id(), Round.move()) :: :ok
   def move(round_id, player_id, move),
@@ -35,7 +24,7 @@ defmodule Blackjack.RoundServer do
       Supervisor.start_link(
         [
           PlayerNotifier.child_spec(round_id, players),
-          worker(__MODULE__, [round_id, players])
+          %{id: __MODULE__, start: {__MODULE__, :start_link, [round_id, players]}}
         ],
         strategy: :one_for_all
       )

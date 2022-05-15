@@ -2,11 +2,9 @@ defmodule Blackjack do
   use Application
 
   def start(_type, _args) do
-    import Supervisor.Spec
-
     children = [
-      supervisor(Registry, [:unique, Blackjack.Registry]),
-      Blackjack.RoundServer.child_spec()
+      {Registry, [keys: :unique, name: Blackjack.Registry]},
+      {DynamicSupervisor, strategy: :one_for_one, name: Blackjack.RoundsDynamicSup}
     ]
 
     Supervisor.start_link(children, strategy: :rest_for_one)
